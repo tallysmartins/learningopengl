@@ -2,7 +2,7 @@
 #-----------------------------------------------------------------------------
 
 # Name of the project
-PROJ_NAME=bundly
+PROJ_NAME=application
 
 # Compiler used
 CC=g++
@@ -12,20 +12,25 @@ CC_FLAGS=-Iinclude \
          -W \
          -c \
 
-PKGS=libglade-2.0
+#PKGS=libglade-2.0
+#`pkg-config --cflags --libs $(PKGS)`
+
 LD_FLAGS=-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl
 
 # Clean command
 RM=rm -rf
 
-# .cpp files
+# .cpp and c files
 CPP_SOURCE=$(wildcard ./src/*.cpp)
+C_SOURCE=$(wildcard ./src/*.c)
 
 # .hpp files
 HPP_SOURCE=$(wildcard ./include/*.hpp)
+H_SOURCE=$(wildcard ./include/*.h)
 
 # Object files
 OBJ=$(subst .cpp,.o,$(subst src,objects,$(CPP_SOURCE)))
+C_OBJ=$(subst .c,.o,$(subst src,objects,$(C_SOURCE)))
 
 ###########################
 # Compilation and linking #
@@ -34,32 +39,37 @@ all: objFolder $(PROJ_NAME)
 
 full: clean all
 
-$(PROJ_NAME): $(OBJ)
-	@ echo 'Building binary using GCC linker: $@'
-	$(CC) $^ -o $@ $(LD_FLAGS) `pkg-config --cflags --libs $(PKGS)`
+$(PROJ_NAME): $(OBJ) $(C_OBJ)
+	@ echo '(0) Building binary using GCC linker: $@'
+	$(CC) $^ -o $@ $(LD_FLAGS) 
 	@ echo 'Finished building binary: $@' 
 	@ echo ' '
 
 ./objects/%.o: ./src/%.cpp ./include/%.hpp
-	@ echo 'Building target file using GCC compiler: $<'
-	$(CC) -c $< $(CC_FLAGS) -o $@ `pkg-config --cflags --libs $(PKGS)`
+	@ echo '(1) Building target file using GCC compiler: $<'
+	$(CC) -c $< $(CC_FLAGS) -o $@ 
+	@ echo ' '
+
+./objects/%.o: ./src/%.c ./include/%.h
+	@ echo '(2) Building target file using GCC compiler: $<'
+	gcc -c $< $(CC_FLAGS) -o $@ 
 	@ echo ' '
 
 ./objects/%.o:
-	@ echo 'Building target file using GCC compiler: $<'
-	$(CC) -c $< $(CC_FLAGS) -o $@ `pkg-config --cflags --libs $(PKGS)`
+	@ echo '(3) Building target file using GCC compiler: $<'
+	$(CC) -c $< $(CC_FLAGS) -o $@ 
 	@ echo ' '
 
 ./objects/main.o: ./src/main.cpp $(HPP_SOURCE)
-	@ echo 'Building main target using GCC compiler: $<'
-	$(CC) -c $< $(CC_FLAGS) -o $@ `pkg-config --cflags --libs $(PKGS)`
+	@ echo '(4) Building main target using GCC compiler: $<'
+	$(CC) -c $< $(CC_FLAGS) -o $@ 
 	@ echo ' '
 
 objFolder:
 	@ mkdir -p objects
 
 run:
-	optirun ./bundly
+	./$(PROJ_NAME)
 
 clean:
 	@ echo 'Cleaning object files'
