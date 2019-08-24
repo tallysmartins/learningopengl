@@ -10,6 +10,8 @@ void processInput(GLFWwindow* window);
 const unsigned int SCR_HEIGHT = 800;
 const unsigned int SCR_WIDTH = 600;
 
+const char* vertexShaderSource = "vec3 aPos; void main() { gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0); }";
+
 int main()
 {
     //Initialize the GLFW library before any glfw call, returns GL_TRUE or GL_FALSE
@@ -23,8 +25,6 @@ int main()
     //*MacOS specific to force CORE profile only
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-
-
 
     // GLFW window creation
     GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
@@ -56,11 +56,25 @@ int main()
     unsigned int VBO;
     glGenBuffers(1, &VBO);
 
-    // See this buffer as an Vertex Array
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // Create vertexShader
+    unsigned int vertexShader;
+    vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
-    // Write our vertices to the buffer
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // Set and compile vertexShader defined in string vertexShaderSource
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    // Check if shader compiled successfully
+    int  success;
+    char infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    // Output log
+    if(!success)
+    {
+      glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+      std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+
 
     // render loop
     // ------------
@@ -72,10 +86,15 @@ int main()
       glClearColor(0.2f, 0.3f, 0.3f, alpha);
       glClear(GL_COLOR_BUFFER_BIT);
 
-      if(alpha >= 1.0)
-        alpha = 0.1;
+      // See this buffer as an Vertex Array
+      glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-      alpha += 0.1;
+      // Write our vertices to the buffer
+      glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+      glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices));
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 
       //input
       processInput(window);
