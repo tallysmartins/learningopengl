@@ -17,7 +17,15 @@ const char *vertexShaderSource = "#version 330 core\n"
     "{\n"
     "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
     "}\0";
-const char *fragmentShaderSource = "#version 330 core\n"
+
+const char *redFragmentShaderSource = "#version 330 core\n"
+    "out vec4 FragColor;\n"
+    "void main()\n"
+    "{\n"
+    "   FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
+    "}\n\0";
+
+const char *orangeFragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
     "void main()\n"
     "{\n"
@@ -110,39 +118,66 @@ int main()
 
     // ########################################################
     // Create fragmentShader
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    unsigned int redFragmentShader, orangeFragmentShader;
+    redFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    orangeFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
     // upload code to compile
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
+    glShaderSource(redFragmentShader, 1, &redFragmentShaderSource, NULL);
+    glCompileShader(redFragmentShader);
 
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    glGetShaderiv(redFragmentShader, GL_COMPILE_STATUS, &success);
     // Output log
     if(!success)
     {
-      glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+      glGetShaderInfoLog(redFragmentShader, 512, NULL, infoLog);
+      std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+    }
+
+    // upload code to compile
+    glShaderSource(orangeFragmentShader, 1, &orangeFragmentShaderSource, NULL);
+    glCompileShader(orangeFragmentShader);
+
+    glGetShaderiv(orangeFragmentShader, GL_COMPILE_STATUS, &success);
+    // Output log
+    if(!success)
+    {
+      glGetShaderInfoLog(orangeFragmentShader, 512, NULL, infoLog);
       std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 
     // ########################################################
     // Create a shader Program and attach all shaders that we have in a single program object
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
+    unsigned int redShaderProgram, orangeShaderProgram;
+    redShaderProgram = glCreateProgram();
+    orangeShaderProgram = glCreateProgram();
 
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    glAttachShader(redShaderProgram, vertexShader);
+    glAttachShader(redShaderProgram, redFragmentShader);
+    glLinkProgram(redShaderProgram);
+
 
     // Check for errors when linking shaders in the shaderProgram
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    glGetProgramiv(redShaderProgram, GL_LINK_STATUS, &success);
     if(!success) {
-      glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+      glGetProgramInfoLog(redShaderProgram, 512, NULL, infoLog);
+      std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+    }
+
+    glAttachShader(orangeShaderProgram, vertexShader);
+    glAttachShader(orangeShaderProgram, orangeFragmentShader);
+    glLinkProgram(orangeShaderProgram);
+
+    // Check for errors when linking shaders in the shaderProgram
+    glGetProgramiv(orangeShaderProgram, GL_LINK_STATUS, &success);
+    if(!success) {
+      glGetProgramInfoLog(orangeShaderProgram, 512, NULL, infoLog);
       std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
 
     glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    glDeleteShader(redFragmentShader);
+    glDeleteShader(orangeFragmentShader);
 
 
     // render loop
@@ -159,14 +194,15 @@ int main()
       processInput(window);
 
 
-      glUseProgram(shaderProgram);
+      glUseProgram(orangeShaderProgram);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
       //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
       glDrawArrays(GL_TRIANGLES, 0, 3);
-      glDrawArrays(GL_TRIANGLES, 3, 3);
+      glUseProgram(redShaderProgram);
+      glDrawArrays(GL_TRIANGLES, 3, 6);
 
       // glBindVertexArray(0); // no need to unbind it every time
 
