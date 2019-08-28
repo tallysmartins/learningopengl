@@ -9,6 +9,7 @@ void processInput(GLFWwindow* window);
 
 const unsigned int SCR_HEIGHT = 800;
 const unsigned int SCR_WIDTH = 600;
+unsigned int POLYGON_MODE = GL_FILL;
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
@@ -163,8 +164,9 @@ int main()
 
       glUseProgram(shaderProgram);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
-      glDrawElements(GL_LINE_LOOP, 6, GL_UNSIGNED_INT, 0);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
       // glBindVertexArray(0); // no need to unbind it every time
 
@@ -182,6 +184,15 @@ void processInput(GLFWwindow* window) {
   if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
     std::cout << "ESC key pressed, exiting... bye bye!" << std::endl;
+  }
+
+  if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+     glPolygonMode(GL_FRONT_AND_BACK, POLYGON_MODE);
+     if(POLYGON_MODE == GL_FILL) {
+       POLYGON_MODE = GL_LINE;
+     } else {
+       POLYGON_MODE = GL_FILL;
+     }
   }
 }
 
