@@ -13,16 +13,20 @@ unsigned int POLYGON_MODE = GL_FILL;
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
+    "layout (location = 1) in vec3 aColor;\n"
+    "out vec3 colour;"
     "void main()\n"
     "{\n"
+    "   colour = aColor;"
     "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
     "}\0";
 
 const char *redFragmentShaderSource = "#version 330 core\n"
+    "in vec3 colour;"
     "out vec4 FragColor;\n"
     "void main()\n"
     "{\n"
-    "   FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
+    "   FragColor = vec4(colour, 1.0f);\n"
     "}\n\0";
 
 const char *orangeFragmentShaderSource = "#version 330 core\n"
@@ -75,25 +79,48 @@ int main()
       -0.5f, 0.5f, 0.0f
     };
 
+    float colors[] = {
+      1.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 1.0f,
+      0.0f,  1.0f, 0.0f
+    };
 
-    // Allocate a buffer in the GPU and save its id in VBO
-    unsigned int VBO, VAO;
+
+    //Create, Bind and Write data to our points data buffer
+    unsigned int points_VBO;
+    glGenBuffers(1, &points_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, points_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(0, GL_ARRAY_BUFFER);//unbind
+
+    //Create, Bind and Write data to our colors data buffer
+    unsigned int colors_VBO;
+    glGenBuffers(1, &colors_VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, colors_VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+    glBindBuffer(0, GL_ARRAY_BUFFER);//unbind
+
+    //Create our VAO object bind to it and setup object configuration for drawing
+    unsigned int VAO;
     glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
     glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
+    //setup points_VBO to index 0 in our shader
+    glBindBuffer(GL_ARRAY_BUFFER, points_VBO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+    //setup colors_VBO to index 1 in our shader
+    glBindBuffer(GL_ARRAY_BUFFER, colors_VBO);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+    //Enable previously created shader attributes (stored in newer versions of OpenGL)
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // Try to insert this later
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+    // Unbind
     glBindVertexArray(0);
 
     // ########################################################
@@ -200,9 +227,9 @@ int main()
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
       //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-      glDrawArrays(GL_TRIANGLES, 0, 3);
-      glUseProgram(redShaderProgram);
       glDrawArrays(GL_TRIANGLES, 3, 6);
+      glUseProgram(redShaderProgram);
+      glDrawArrays(GL_TRIANGLES, 0, 3);
 
       // glBindVertexArray(0); // no need to unbind it every time
 
