@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <cmath>
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -15,10 +16,11 @@ const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "layout (location = 1) in vec3 aColor;\n"
     "out vec3 colour;"
+    "uniform float sinVal = 1.0;"
     "void main()\n"
     "{\n"
-    "   colour = aColor;"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "   colour = aColor*sinVal;"
+    "   gl_Position = vec4(aPos.x + (0.4 * sinVal), aPos.y, aPos.z, 1.0);\n"
     "}\0";
 
 const char *redFragmentShaderSource = "#version 330 core\n"
@@ -67,6 +69,10 @@ int main()
       std::cout << "Failed to initialize GLAD" << std::endl;
       return -1;
     }
+
+    int nrAttributes;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
+    std::cout << "Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
 
 
     // Create our triangle vertexes mapped in -1, 1 space in device coordinates
@@ -207,11 +213,18 @@ int main()
     glDeleteShader(orangeFragmentShader);
 
 
-    // render loop
-    // ------------
+
+    float timeValue = 0;
+    float t = 0;
+    // #######################################################################
+    // RENDER LOOP
+    // #######################################################################
     float alpha = 1.0;
     while(!glfwWindowShouldClose(window))
     {
+      timeValue = glfwGetTime();
+      timeValue = sin(timeValue);
+
       //clear openGL buffer (can be COLOR, STENCIL and DEPTH) filling them with the given
       // glClearColor
       glClearColor(0.2f, 0.3f, 0.9f, alpha);
@@ -220,8 +233,9 @@ int main()
       //input
       processInput(window);
 
-
+      int sinValLocation = glGetUniformLocation(orangeShaderProgram, "sinVal");
       glUseProgram(orangeShaderProgram);
+      glUniform1f(sinValLocation, timeValue);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
@@ -229,6 +243,7 @@ int main()
 
       glDrawArrays(GL_TRIANGLES, 3, 6);
       glUseProgram(redShaderProgram);
+      glUniform1f(0, timeValue);
       glDrawArrays(GL_TRIANGLES, 0, 3);
 
       // glBindVertexArray(0); // no need to unbind it every time
@@ -244,6 +259,7 @@ int main()
 }
 
 void processInput(GLFWwindow* window) {
+
   if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
     std::cout << "ESC key pressed, exiting... bye bye!" << std::endl;
