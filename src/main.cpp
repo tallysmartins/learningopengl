@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cmath>
 
+#include "shader.hpp"
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -12,39 +14,12 @@ const unsigned int SCR_HEIGHT = 800;
 const unsigned int SCR_WIDTH = 600;
 unsigned int POLYGON_MODE = GL_FILL;
 
-const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "layout (location = 1) in vec3 aColor;\n"
-    "out vec3 colour;"
-    "uniform float sinVal = 1.0;"
-    "void main()\n"
-    "{\n"
-    "   colour = aColor*sinVal;"
-    "   gl_Position = vec4(aPos.x + (0.4 * sinVal), aPos.y, aPos.z, 1.0);\n"
-    "}\0";
-
-const char *redFragmentShaderSource = "#version 330 core\n"
-    "in vec3 colour;"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(colour, 1.0f);\n"
-    "}\n\0";
-
-const char *orangeFragmentShaderSource = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-    "}\n\0";
-
 int main()
 {
-    //Initialize the GLFW library before any glfw call, returns GL_TRUE or GL_FALSE
     glfwInit();
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -69,11 +44,6 @@ int main()
       std::cout << "Failed to initialize GLAD" << std::endl;
       return -1;
     }
-
-    int nrAttributes;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-    std::cout << "Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
-
 
     // Create our triangle vertexes mapped in -1, 1 space in device coordinates
     float vertices[] = {
@@ -123,99 +93,17 @@ int main()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
 
-    // Try to insert this later
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
-
     // Unbind
     glBindVertexArray(0);
 
-    // ########################################################
-    // Create vertexShader
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
-    // Set and compile vertexShader defined in string vertexShaderSource
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
+    Shader redShaderProgram("/home/tallys/git/learnopengl/src/shaders/points.vert", "/home/tallys/git/learnopengl/src/shaders/dynamic_color.frag");
 
-    // Check if shader compiled successfully
-    int  success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    // Output log
-    if(!success)
-    {
-      glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-      std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    // ########################################################
-    // Create fragmentShader
-    unsigned int redFragmentShader, orangeFragmentShader;
-    redFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    orangeFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    // upload code to compile
-    glShaderSource(redFragmentShader, 1, &redFragmentShaderSource, NULL);
-    glCompileShader(redFragmentShader);
-
-    glGetShaderiv(redFragmentShader, GL_COMPILE_STATUS, &success);
-    // Output log
-    if(!success)
-    {
-      glGetShaderInfoLog(redFragmentShader, 512, NULL, infoLog);
-      std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    // upload code to compile
-    glShaderSource(orangeFragmentShader, 1, &orangeFragmentShaderSource, NULL);
-    glCompileShader(orangeFragmentShader);
-
-    glGetShaderiv(orangeFragmentShader, GL_COMPILE_STATUS, &success);
-    // Output log
-    if(!success)
-    {
-      glGetShaderInfoLog(orangeFragmentShader, 512, NULL, infoLog);
-      std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    // ########################################################
-    // Create a shader Program and attach all shaders that we have in a single program object
-    unsigned int redShaderProgram, orangeShaderProgram;
-    redShaderProgram = glCreateProgram();
-    orangeShaderProgram = glCreateProgram();
-
-    glAttachShader(redShaderProgram, vertexShader);
-    glAttachShader(redShaderProgram, redFragmentShader);
-    glLinkProgram(redShaderProgram);
-
-
-    // Check for errors when linking shaders in the shaderProgram
-    glGetProgramiv(redShaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
-      glGetProgramInfoLog(redShaderProgram, 512, NULL, infoLog);
-      std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-    glAttachShader(orangeShaderProgram, vertexShader);
-    glAttachShader(orangeShaderProgram, orangeFragmentShader);
-    glLinkProgram(orangeShaderProgram);
-
-    // Check for errors when linking shaders in the shaderProgram
-    glGetProgramiv(orangeShaderProgram, GL_LINK_STATUS, &success);
-    if(!success) {
-      glGetProgramInfoLog(orangeShaderProgram, 512, NULL, infoLog);
-      std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(redFragmentShader);
-    glDeleteShader(orangeFragmentShader);
-
+    Shader orangeShaderProgram("/home/tallys/git/learnopengl/src/shaders/points.vert", "/home/tallys/git/learnopengl/src/shaders/static_color.frag");
 
 
     float timeValue = 0;
-    float t = 0;
+
     // #######################################################################
     // RENDER LOOP
     // #######################################################################
@@ -233,16 +121,15 @@ int main()
       //input
       processInput(window);
 
-      int sinValLocation = glGetUniformLocation(orangeShaderProgram, "sinVal");
-      glUseProgram(orangeShaderProgram);
-      glUniform1f(sinValLocation, timeValue);
+      orangeShaderProgram.use();
+      glUniform1f(0, timeValue);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
       //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
       glDrawArrays(GL_TRIANGLES, 3, 6);
-      glUseProgram(redShaderProgram);
+      redShaderProgram.use();
       glUniform1f(0, timeValue);
       glDrawArrays(GL_TRIANGLES, 0, 3);
 
