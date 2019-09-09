@@ -15,7 +15,8 @@ CC_FLAGS=-Iinclude \
 #PKGS=libglade-2.0
 #`pkg-config --cflags --libs $(PKGS)`
 
-LD_FLAGS=-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl
+LD_FLAGS=-lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lshp
+LD_PATHS=-rpath=/usr/local/lib/
 
 # Clean command
 RM=rm -rf
@@ -41,7 +42,7 @@ full: clean all
 
 $(PROJ_NAME): $(OBJ) $(C_OBJ)
 	@ echo '(0) Building binary using GCC linker: $@'
-	$(CC) $^ -o $@ $(LD_FLAGS) 
+	$(CC) $^ -Wl,$(LD_PATHS) -o $@ $(LD_FLAGS)  
 	@ echo 'Finished building binary: $@' 
 	@ echo ' '
 
