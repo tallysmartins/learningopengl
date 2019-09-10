@@ -1,8 +1,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <shapefil.h>
 
 #include <iostream>
 #include <cmath>
+#include <vector>
 
 #include "shader.hpp"
 
@@ -10,12 +12,110 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
-const unsigned int SCR_HEIGHT = 800;
-const unsigned int SCR_WIDTH = 600;
+const unsigned int SCR_HEIGHT = 512;
+const unsigned int SCR_WIDTH = 512;
 unsigned int POLYGON_MODE = GL_FILL;
+
+GLenum glCheckError_(const char *file, int line)
+{
+    GLenum errorCode;
+    while ((errorCode = glGetError()) != GL_NO_ERROR)
+    {
+        std::string error;
+        switch (errorCode)
+        {
+            case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+            case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+            case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+            case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
+            case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
+            case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+        }
+        std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+    }
+    return errorCode;
+}
+#define glCheckError() glCheckError_(__FILE__, __LINE__)
+
+
+std::vector<float> loadMap() {
+
+  std::vector<float> points;
+
+  int nEntities, pnShapeType;
+  double padfMinBound[4], padfMaxBound[4];
+  SHPHandle myHandler = SHPOpen("/home/tallys/git/od-analysis/datasets/od1987/raw/Mapas/Shape/Zonas1987_region", "rb");
+  SHPGetInfo(myHandler, &nEntities, &pnShapeType, padfMinBound, padfMaxBound);
+  std::cout << nEntities << std::endl;
+  std::cout << pnShapeType << std::endl;
+
+  float xMin = padfMinBound[0];
+  float yMin = padfMinBound[1];
+  float xMax = padfMaxBound[0];
+  float yMax = padfMaxBound[1];
+  printf("xMin: %f, yMin: %f\n", xMin, yMin);
+  printf("xMax: %f, yMax: %f\n", xMax, yMax);
+  std::cout << "READING SHAPEFILE"  << std::endl;
+
+  for(int T=0; T<nEntities; T++){
+  //for(int T=0; T<2; T++){
+    SHPObject *obj = SHPReadObject(myHandler, T);
+
+    std::cout << "Reading Shape " << T << std::endl;
+    std::cout << "nSHPType " << obj->nSHPType << std::endl;
+    std::cout << "nShapeId " << obj->nShapeId << std::endl;
+    std::cout << "nParts " << obj->nParts << std::endl;
+    std::cout << "*panPartStart " << *obj->panPartStart << std::endl;
+    std::cout << "nVertices " << obj->nVertices << std::endl;
+    float xablau;
+    float scale=0.0;
+    float rangeX = xMax - xMin;
+    float rangeY = yMax - yMin;
+    float border = 0;
+    float size = 2;
+
+    if (rangeX>rangeY)
+      scale  = (1-border)*size/rangeX;
+    else
+      scale  = (1-border)*size/rangeY;
+
+    float xTranslation = (size-scale*rangeX)/2 - 1;
+    float yTranslation = (size-scale*rangeY)/2 - 1;
+
+    for(int i=0; i < obj->nVertices; i++) {
+      //printf("%d - Coords: %.6f, %.6f\n", i, obj->padfX[i], obj->padfY[i]);
+      xablau = (obj->padfX[i] - xMin)/(xMax - xMin);
+      //points.push_back(xablau*scale+xTranslation);
+      xablau = xablau*scale+xTranslation;
+      //xablau = (xablau - padfMinBound[0])/(padfMaxBound[0] - padfMinBound[0]);
+      points.push_back(xablau);
+
+      xablau = (obj->padfY[i] - yMin)/(yMax - yMin);
+      //points.push_back(xablau*scale+xTranslation);
+      xablau = xablau*scale+yTranslation;
+      //xablau = (xablau - padfMinBound[1])/(padfMaxBound[1] - padfMinBound[1]);
+      points.push_back(xablau);
+      //xablau = (obj->padfY[i] - padfMinBound[1])/(padfMaxBound[1] - padfMinBound[1]);
+      //points.push_back(obj->padfY[i]);
+      //points.push_back(xablau*scale+yTranslation);
+      points.push_back(0.0);
+    }
+  }
+
+  return points;
+}
 
 int main()
 {
+    std::vector<float> points = loadMap();
+    int N = points.size();
+    std::cout << "----------------------- " << std::endl;
+    for(int x=0; x<N; x+=3) {
+      //fprintf(stderr, "%.6f,%.6f\n", x,  points[x], points[x+1]);
+    }
+    std::cout << "size " << N << std::endl;
+
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -28,7 +128,7 @@ int main()
 #endif
 
     // GLFW window creation
-    GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL)
     {
       std::cout << "Failed to create GLFW window" << std::endl;
@@ -66,15 +166,15 @@ int main()
     unsigned int points_VBO;
     glGenBuffers(1, &points_VBO);
     glBindBuffer(GL_ARRAY_BUFFER, points_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(0, GL_ARRAY_BUFFER);//unbind
+    glBufferData(GL_ARRAY_BUFFER, N*sizeof(float), points.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
 
     //Create, Bind and Write data to our colors data buffer
     unsigned int colors_VBO;
     glGenBuffers(1, &colors_VBO);
     glBindBuffer(GL_ARRAY_BUFFER, colors_VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-    glBindBuffer(0, GL_ARRAY_BUFFER);//unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
 
     //Create our VAO object bind to it and setup object configuration for drawing
     unsigned int VAO;
@@ -110,28 +210,27 @@ int main()
     float alpha = 1.0;
     while(!glfwWindowShouldClose(window))
     {
-      timeValue = glfwGetTime();
-      timeValue = sin(timeValue);
+      glCheckError();
 
       //clear openGL buffer (can be COLOR, STENCIL and DEPTH) filling them with the given
       // glClearColor
-      glClearColor(0.2f, 0.3f, 0.9f, alpha);
+      glClearColor(0.0f, 0.0f, 0.1f, alpha);
       glClear(GL_COLOR_BUFFER_BIT);
 
       //input
       processInput(window);
 
       orangeShaderProgram.use();
-      glUniform1f(0, timeValue);
+      //glUniform1f(0, timeValue);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
       //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-      glDrawArrays(GL_TRIANGLES, 3, 6);
-      redShaderProgram.use();
-      glUniform1f(0, timeValue);
-      glDrawArrays(GL_TRIANGLES, 0, 3);
+      glLineWidth(1);
+      glPointSize(1);
+
+      glDrawArrays(GL_POINTS, 0, N/3);
 
       // glBindVertexArray(0); // no need to unbind it every time
 
