@@ -38,6 +38,7 @@ GLenum glCheckError_(const char *file, int line)
 }
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
 
+std::vector<int> shapeCounts;
 
 std::vector<float> loadMap() {
 
@@ -47,6 +48,7 @@ std::vector<float> loadMap() {
   double padfMinBound[4], padfMaxBound[4];
   SHPHandle myHandler = SHPOpen("/home/tallys/git/od-analysis/datasets/od1987/raw/Mapas/Shape/Zonas1987_region", "rb");
   SHPGetInfo(myHandler, &nEntities, &pnShapeType, padfMinBound, padfMaxBound);
+  shapeCounts.assign(nEntities, 0);
   std::cout << nEntities << std::endl;
   std::cout << pnShapeType << std::endl;
 
@@ -61,6 +63,7 @@ std::vector<float> loadMap() {
   for(int T=0; T<nEntities; T++){
   //for(int T=0; T<2; T++){
     SHPObject *obj = SHPReadObject(myHandler, T);
+    shapeCounts[T] = obj->nVertices;
 
     std::cout << "Reading Shape " << T << std::endl;
     std::cout << "nSHPType " << obj->nSHPType << std::endl;
@@ -230,13 +233,18 @@ int main()
       glLineWidth(1);
       glPointSize(1);
 
-      glDrawArrays(GL_POINTS, 0, N/3);
+      int last = 0;
+      for(int j=0; j<shapeCounts.size(); j++) {
+        glDrawArrays(GL_LINE_LOOP, last, shapeCounts[j]);
+        last += shapeCounts[j];
+      }
 
       // glBindVertexArray(0); // no need to unbind it every time
 
       // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
       glfwSwapBuffers(window);
       glfwPollEvents();
+
     }
 
     // Delete all GLFW resources
