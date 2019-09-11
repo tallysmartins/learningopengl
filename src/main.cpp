@@ -47,6 +47,11 @@ std::vector<float> loadMap() {
   int nEntities, pnShapeType;
   double padfMinBound[4], padfMaxBound[4];
   SHPHandle myHandler = SHPOpen("/home/tallys/git/od-analysis/datasets/od1987/raw/Mapas/Shape/Zonas1987_region", "rb");
+	if(myHandler == NULL) {
+		std::cout << __FILE__ << ":" << __LINE__ <<" [E]:Nao foi possivel abrir shapefile. Abortando execução!\n" ;
+		exit(-1);
+	}
+
   SHPGetInfo(myHandler, &nEntities, &pnShapeType, padfMinBound, padfMaxBound);
   shapeCounts.assign(nEntities, 0);
   std::cout << nEntities << std::endl;
@@ -71,7 +76,7 @@ std::vector<float> loadMap() {
     std::cout << "nParts " << obj->nParts << std::endl;
     std::cout << "*panPartStart " << *obj->panPartStart << std::endl;
     std::cout << "nVertices " << obj->nVertices << std::endl;
-    float xablau;
+    float x, y, z = 0;
     float rangeX = xMax - xMin;
     float rangeY = yMax - yMin;
     float border = 0.0;
@@ -91,18 +96,21 @@ std::vector<float> loadMap() {
     for(int i=0; i < obj->nVertices; i++) {
       // Vertex points to be draw are made of 3 float elements (X, Y, Z)
 
-      //Calculate vertex X-axes and add to data points array
-      xablau = (obj->padfX[i] - xMin)/(xMax - xMin); // Normalized points in range [0,1]
-      xablau = xablau*scale+xTranslation;
-      points.push_back(xablau);
+      //Calculate normalized vertexes for axes X and Y
+			// Normalized points fall in range [0,1]
+      x = (obj->padfX[i] - xMin)/(xMax - xMin); 
+      y = (obj->padfY[i] - yMin)/(yMax - yMin);
+      fprintf(stderr, "%f, %f,\n", x, y);
 
-      //Calculate vertex Y-axes and add to data points array 
-      xablau = (obj->padfY[i] - yMin)/(yMax - yMin);
-      xablau = xablau*scale+yTranslation;
-      points.push_back(xablau);
+			//Scale points and make a translation to center points in between [-1,1]
+      x = x*scale+xTranslation;
+      y = y*scale+yTranslation;
 
-      //Adds zero value for Z-axes to data points array
-      points.push_back(0.0);
+      //Add X, Y, Z coordinates to points data array
+      points.push_back(x);
+      points.push_back(y);
+      points.push_back(z); // z = 0;
+
 
     }
   }
@@ -114,11 +122,6 @@ int main()
 {
     std::vector<float> points = loadMap();
     int N = points.size();
-    std::cout << "----------------------- " << std::endl;
-    for(int x=0; x<N; x+=3) {
-      //fprintf(stderr, "%.6f,%.6f\n", x,  points[x], points[x+1]);
-    }
-    std::cout << "size " << N << std::endl;
 
     glfwInit();
 
@@ -149,35 +152,11 @@ int main()
       return -1;
     }
 
-    // Create our triangle vertexes mapped in -1, 1 space in device coordinates
-    float vertices[] = {
-      -0.5f, -0.5f, 0.0f,
-      0.5f, -0.5f, 0.0f,
-      -0.5f,  0.5f, 0.0f,
-      0.5f,  -0.5f, 0.0f,
-      0.5f, 0.5f, 0.0f,
-      -0.5f, 0.5f, 0.0f
-    };
-
-    float colors[] = {
-      1.0f, 0.0f, 0.0f,
-      0.0f, 0.0f, 1.0f,
-      0.0f,  1.0f, 0.0f
-    };
-
-
     //Create, Bind and Write data to our points data buffer
     unsigned int points_VBO;
     glGenBuffers(1, &points_VBO);
     glBindBuffer(GL_ARRAY_BUFFER, points_VBO);
     glBufferData(GL_ARRAY_BUFFER, N*sizeof(float), points.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
-
-    //Create, Bind and Write data to our colors data buffer
-    unsigned int colors_VBO;
-    glGenBuffers(1, &colors_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, colors_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);//unbind
 
     //Create our VAO object bind to it and setup object configuration for drawing
@@ -189,17 +168,11 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, points_VBO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-    //setup colors_VBO to index 1 in our shader
-    glBindBuffer(GL_ARRAY_BUFFER, colors_VBO);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
     //Enable previously created shader attributes (stored in newer versions of OpenGL)
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
 
     // Unbind
     glBindVertexArray(0);
-
 
     Shader redShaderProgram("/home/tallys/git/learnopengl/src/shaders/points.vert", "/home/tallys/git/learnopengl/src/shaders/dynamic_color.frag");
 
@@ -225,16 +198,24 @@ int main()
       processInput(window);
 
       orangeShaderProgram.use();
-      //glUniform1f(0, timeValue);
+      int loc = glGetUniformLocation(orangeShaderProgram.ID, "c");
+      std::cout << "loc = " << loc << std::endl;
+      orangeShaderProgram.setFloat("c", 1);
       glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
       // Draw elements from Element Buffer Object (use indices to avoid duplicated data)
       //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-      glLineWidth(1);
-      glPointSize(1);
-
       int last = 0;
+      for(int j=0; j<shapeCounts.size(); j++) {
+        glDrawArrays(GL_TRIANGLE_FAN, last, shapeCounts[j]);
+        last += shapeCounts[j];
+      }
+      //glDrawArrays(GL_TRIANGLE_FAN, 0, N/3);
+
+      last = 0;
+      orangeShaderProgram.setFloat("c", 0);
+      glLineWidth(1.2);
       for(int j=0; j<shapeCounts.size(); j++) {
         glDrawArrays(GL_LINE_LOOP, last, shapeCounts[j]);
         last += shapeCounts[j];

@@ -92,6 +92,7 @@ void Shader::use() {
 }
 
 void Shader::setFloat(const string &name, float value) const {
-
-  cout << "Seting float for " << name << "to " << value << endl;
+  int location = glGetUniformLocation(this->ID, name.data());
+  glUniform1f(location, value);
+  cout << "Seting float for " << name << " to " << value << endl;
 }
