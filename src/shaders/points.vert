@@ -9,5 +9,5 @@ uniform float sinVal = 1.0;
 void main()
 {
   colour = aColor*sinVal;
-  gl_Position = vec4(aPos.x + (0.4 * sinVal), aPos.y, aPos.z, 1.0);
+  gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
 };

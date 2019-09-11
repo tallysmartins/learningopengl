@@ -72,37 +72,38 @@ std::vector<float> loadMap() {
     std::cout << "*panPartStart " << *obj->panPartStart << std::endl;
     std::cout << "nVertices " << obj->nVertices << std::endl;
     float xablau;
-    float scale=0.0;
     float rangeX = xMax - xMin;
     float rangeY = yMax - yMin;
-    float border = 0;
+    float border = 0.0;
     float size = 2;
+    float scale=1.0;
 
+    // Get the scale based on max range X or Y axes
+    // If 
     if (rangeX>rangeY)
       scale  = (1-border)*size/rangeX;
     else
       scale  = (1-border)*size/rangeY;
 
-    float xTranslation = (size-scale*rangeX)/2 - 1;
-    float yTranslation = (size-scale*rangeY)/2 - 1;
+    float xTranslation = -scale/2;//Our points fall into 0,1 quadrant, we need to 
+    float yTranslation = -scale/2;//make a translation in both axes to center in -1,1
 
     for(int i=0; i < obj->nVertices; i++) {
-      //printf("%d - Coords: %.6f, %.6f\n", i, obj->padfX[i], obj->padfY[i]);
-      xablau = (obj->padfX[i] - xMin)/(xMax - xMin);
-      //points.push_back(xablau*scale+xTranslation);
+      // Vertex points to be draw are made of 3 float elements (X, Y, Z)
+
+      //Calculate vertex X-axes and add to data points array
+      xablau = (obj->padfX[i] - xMin)/(xMax - xMin); // Normalized points in range [0,1]
       xablau = xablau*scale+xTranslation;
-      //xablau = (xablau - padfMinBound[0])/(padfMaxBound[0] - padfMinBound[0]);
       points.push_back(xablau);
 
+      //Calculate vertex Y-axes and add to data points array 
       xablau = (obj->padfY[i] - yMin)/(yMax - yMin);
-      //points.push_back(xablau*scale+xTranslation);
       xablau = xablau*scale+yTranslation;
-      //xablau = (xablau - padfMinBound[1])/(padfMaxBound[1] - padfMinBound[1]);
       points.push_back(xablau);
-      //xablau = (obj->padfY[i] - padfMinBound[1])/(padfMaxBound[1] - padfMinBound[1]);
-      //points.push_back(obj->padfY[i]);
-      //points.push_back(xablau*scale+yTranslation);
+
+      //Adds zero value for Z-axes to data points array
       points.push_back(0.0);
+
     }
   }
 
@@ -239,6 +240,7 @@ int main()
         last += shapeCounts[j];
       }
 
+      glCheckError();
       // glBindVertexArray(0); // no need to unbind it every time
 
       // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
